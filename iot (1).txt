@@ -1,0 +1,115 @@
+#include <LiquidCrystal_I2C.h>
+
+
+
+#include <Wire.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+ 
+
+LiquidCrystal_h lcd(0x27, 16, 2); // LCD display not working chnage value 3F into 27.
+  //LiquidCrystal lcd(D0, D1, D2, D3, D4, D5);
+  
+  const char* ssid = "Redmi Note 8 Pro";         //WIFI SSID Name                             
+  const char* password = "ishu1234";        //WIFI Password
+  const char* host = "api.thingspeak.com";  //We read the data from this host                                   
+  const int httpPortRead = 80;                                           
+                                                  
+  const char* url1 = "/apps/thinghttp/send_request?api_key= H9ZDUA7OJBX9302K";  // change this number. Please follow the procedure  
+ 
+  int To_remove;      //There are some irrelevant data on the string and here's how I keep the index
+                      //of those characters 
+  String IndiaScore,Data_Raw,Data_Raw_1;  //Here I keep the numbers that I got
+
+  WiFiClient client;      //Create a WiFi client and http client                                                     
+  HTTPClient http; 
+
+  
+  void setup() {
+     lcd.init();
+  lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("    Welcome"); // welcome details
+    lcd.setCursor(0, 1);
+    lcd.print("TeachMeSomething");  
+    
+    Serial.begin(115200);
+    WiFi.disconnect();             //Disconnect and reconnect to the Wifi you set                                                 
+    delay(1000);                                                                  
+    WiFi.begin(ssid, password);                                                   
+    Serial.println("Connected to the WiFi network");   //Display feedback on the serial monitor                                        
+    Serial.println(WiFi.localIP());
+  }
+
+void loop() {
+  
+
+   //Reading 1: Reading of IndiaScore
+    if( http.begin(client,host,httpPortRead,url1))        //Connect to the host and the url                                      
+      {
+        int httpCode = http.GET();                //Check feedback if there's a response                                                  
+        if (httpCode > 0)                                                              
+        {
+          if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) 
+            {                
+              
+              Data_Raw = http.getString();   //Here we store the raw data string
+            
+              
+              Data_Raw_1 = Data_Raw;                                    
+              To_remove = Data_Raw_1.indexOf(">");                      //I look for the position of this symbol ">"                                 
+              Data_Raw_1.remove(0,To_remove+1);                        //I remove it and everything that's before
+              To_remove = Data_Raw_1.indexOf("<");                     //I look for the position of this symbol ">"                                
+              Data_Raw_1.remove(To_remove,Data_Raw_1.length());          //I remove it and everything that's after
+                                                                     //Example: This is the raw data received <td style="font-weight: bold; text-align:right">63,927</td>
+                                                                     //First we look for ">" and we remove everything before it including it
+                                                                     //We stay with this 63,927</td>
+                                                                     //We look for "<" symbol and we remove it + everything after
+                                                                     //We keep only this 63,927 as string
+              IndiaScore=Data_Raw_1;
+              Serial.print("IndiaScore: ");  //I choosed to display it on the serial monitor to help you debug
+              Serial.println(IndiaScore); 
+              
+               
+                                                                                       
+            }
+        }
+        else //If we can't get data
+        {
+          Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        }
+        
+        http.end();                                                                 
+      } 
+    else //If we can't connect to the HTTP
+      {
+        Serial.printf("[HTTP} Unable to connect\n");
+      }
+
+    while (WiFi.status() != WL_CONNECTED)     //In case the Wifi connexion is lost                                    
+      { 
+        
+        WiFi.disconnect();                                                        
+        delay(1000);                                                             
+        
+        WiFi.begin(ssid, password);                                              
+        Serial.println("Reconnecting to WiFi..");       
+        delay(10000);                                                             
+      }
+    lcd.clear();
+     lcd.setCursor(0, 0);
+    lcd.print("World Cup Match"); //Change Your Country Name
+    lcd.setCursor(0, 1);
+    lcd.print("   IND Vs NZ");  //Change Name if you want
+    delay(2000);
+        lcd.clear();
+        lcd.setCursor(2, 0);
+        lcd.print("India-> ");
+        lcd.setCursor(10, 0);
+        lcd.print(IndiaScore);
+        lcd.setCursor(0, 1);
+        lcd.print("Cheers to India");
+        delay(2000);
+        
+        
+}
